@@ -116,3 +116,28 @@ def hh91_match(eccen, sarea, shape=0.75, min_eccen=0, max_eccen=90,
     # We need to unsort these, however!
     r[ordering] = np.array(r)
     return r
+
+# Check the Cortical Magnification; a good way to calculate this is
+# to sort the vertices by eccentricity then look at a sliding window of
+# the vertices at a time.
+def ring_area_deg2(min_eccen, max_eccen, hemifield=True):
+    """Computes the area (in square degrees) of a ring in the visual field."""
+    if hemifield:
+        return np.pi/2 * (max_eccen**2 - min_eccen**2)
+    else:
+        return np.pi * (max_eccen**2 - min_eccen**2)
+def cmag(eccen, sarea, hwidth=0.075):
+    n = len(eccen)
+    if not isinstance(hwidth, int):
+        hwidth = int(np.floor(n*hwidth))
+    width = 2*hwidth + 1
+    ii = np.argsort(eccen)
+    eccen = eccen[ii]
+    sarea = sarea[ii]
+    ii_min = np.arange(0, n - width)
+    ii_max = np.arange(width, n)
+    out_ecc = eccen[hwidth:n-hwidth-1]
+    cumsarea = np.concatenate([np.cumsum(sarea), [0]])
+    rings_srfarea = cumsarea[ii_max] - cumsarea[ii_min - 1]
+    rings_visarea = ring_area_deg2(eccen[ii_min], eccen[ii_max])
+    return (out_ecc, rings_srfarea / rings_visarea)

@@ -1,9 +1,9 @@
 [project]
 name = "eccen_adjust"
-version = "0.1.0"
+version = "0.2.0"
 description = """The eccentricity adjustment package."""
 authors = [
-    {name="Hugo Chow-Wing-Bom"},
+    {name="Hugo T. Chow-Wing-Bom", email="hugo.chow-wing-bom.15@ucl.ac.uk"},
     {name="Noah C. Benson", email="nben@uw.edu"}]
 license = {"text"="MIT"}
 readme = "README.md"

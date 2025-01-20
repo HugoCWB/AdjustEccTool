@@ -6,8 +6,7 @@
 FROM nben/neuropythy:latest
 
 # Note the Maintainer. TODO: add email address.
-MAINTAINER Hugo Chow-Wing-Bom <email>
-
+MAINTAINER Hugo T. Chow-Wing-Bom <hugo.chow-wing-bom.15@ucl.ac.uk>
 
 
 # Copy our library into the docker image.
@@ -23,6 +22,6 @@ RUN cd $HOME/repo \
  && conda activate \
  && pip install -e .
 
-
+ 
 # TODO: add an entrypoint that runs the library command for a subject.
 
