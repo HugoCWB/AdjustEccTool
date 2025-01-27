@@ -3,6 +3,7 @@
 This package contains code to adjust the eccentricity of a predicted pRF map to
 match the eccentricity distribution implied by Horton and Hoyt (1991).
 """
+
 def load_v1(sub,hemidx,fname):
     hem = sub.hemis[hemidx]
     print(hem)
@@ -150,21 +151,30 @@ def adjust_eccen(v1,hemidx,fname,shape=0.75,min_eccen=0,max_eccen=90):
     # Our initial eccentricity values are the Benson 14 template predictions.
     r0 = v1.prop('b14_eccentricity')
     sarea = v1.prop('midgray_surface_area')
-    # We can calculae the scale using the surface area, shape, and max-eccen:
-    scale = hh91_scale(
-        np.sum(sarea),
-        shape=shape,
-        min_eccen=min_eccen,
-        max_eccen=max_eccen)
     print(hemidx, " – V1 Surface Area: ", sarea.sum(), " (scale=",scale, ")", sep='')
-    # Run the matching algorithm and report on it:
-    # fname = str(benson_path) + '/' + hemidx + '.adjusted-eccen.mgh'
-    r = hh91_match(r0, sarea, shape=shape, min_eccen=min_eccen, max_eccen=max_eccen)
+    # We can calculae the scale using the surface area, shape, and max-eccen:
+    r = adjust_eccen_in_v1(r0, sarea, shape=shape, min_eccen=min_eccen, max_eccen=max_eccen)
     ny.save(fname, r)
     print(hemidx, ' - Benson14 Eccentricity: min=', np.min(r0), ', max=', np.max(r0), sep='')
     print(hemidx, ' - Adjusted Eccentricity: min=', np.min(r), ', max=', np.max(r), sep='') 
     return r0,r,scale
-def plot_originalvsadjusted(r0,r,fname):
+def adjust_eccen_in_v1(v1_eccen, v1_surface_area, shape=0.75,min_eccen=0,max_eccen=90):
+   scale = hh91_scale(
+       np.sum(v1_surface_area),
+       shape=shape,
+       min_eccen=min_eccen,
+       max_eccen=max_eccen)
+   # Run the matching algorithm and report on it:
+   r = hh91_match(
+       v1_eccen, v1_surface_area,
+       shape=shape, min_eccen=min_eccen, max_eccen=max_eccen)
+   # Return the adjusted eccen:
+   return r
+
+
+# Plotting Function ############################################################
+
+def plot_originalvsadjusted(r0, r, fname=None):
     # fname = str(Save_DIR / subs) + '_' + hemidx + '_BensonVsAdjusted.png'
 
     # What did the above cell do? Let's plot it:
@@ -179,8 +189,10 @@ def plot_originalvsadjusted(r0,r,fname):
     ax.set_yticks([0.1, 1, 10, 100])
     ax.get_xaxis().set_major_formatter(mpl.ticker.ScalarFormatter())
     ax.get_yaxis().set_major_formatter(mpl.ticker.ScalarFormatter())
-    plt.savefig(fname,dpi=128,bbox_inches = "tight")
-    plt.show()
+    if fname is not None:
+        plt.savefig(fname, dpi=128, bbox_inches = "tight")
+    return fig
+
 def plot_distributionECCvalues(r0,r,scale,fname,shape=0.75,min_eccen=0,max_eccen=90):
     #fname = str(Save_DIR / subs) + '_' + hemidx + '_DistributionECCValues.png'
 

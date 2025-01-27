@@ -22,6 +22,6 @@ RUN cd $HOME/repo \
  && conda activate \
  && pip install -e .
 
- 
-# TODO: add an entrypoint that runs the library command for a subject.
 
+# Add the entrypoint.
+ENTRYPOINT ["python", "-m", "eccen_adjust"]
