@@ -3,7 +3,29 @@
 This package contains code to adjust the eccentricity of a predicted pRF map to
 match the eccentricity distribution implied by Horton and Hoyt (1991).
 """
+def load_v1(sub,hemidx,fname):
+    hem = sub.hemis[hemidx]
+    print(hem)
+    # If we want to run this on another subject, we can apply the the Benson14
+    # template using this code::
+    # ret = ny.vision.predict_retinotopy(hem, sym_angle=False)
+    # hem = hem.with_prop(
+    #     b14_polar_angle=ret['angle'],
+    #     b14_eccentricity=ret['eccen'],
+    #     b14_visual_area=ret['varea'])
 
+    # Pick out just V1 on the white surface, using Benson atlas
+    v1 = hem.white_surface.submesh(hem.mask(('b14_visual_area', 1)))
+    print('Size V1 mask=',len(hem.mask(('b14_visual_area', 1))),sep='') 
+    print('V1=',v1,sep='')
+    # The polar angle values are fine we assume; we just want to rescale
+    # the eccentricity.
+    # fname = str(benson_path) + '/' + hemidx + '-adjusted-eccen-VtxLabels.txt'
+    # print(dir(hem.white_surface)) 
+    # help(v1)
+    np.set_printoptions(threshold=np.inf)
+    ny.save(fname, v1.labels)
+    return hem,v1
 def hh91_scale(surface_area, shape=0.75, min_eccen=0, max_eccen=90):
     '''Returns the `scale` parameter of Horton & Hoyt's magnification model.
 
@@ -116,7 +138,168 @@ def hh91_match(eccen, sarea, shape=0.75, min_eccen=0, max_eccen=90,
     # We need to unsort these, however!
     r[ordering] = np.array(r)
     return r
+def adjust_eccen(v1,hemidx,fname,shape=0.75,min_eccen=0,max_eccen=90):
+    # Go ahead and adjust the eccentricity using the function above.
+    # We can pick a shape parameter; Horton & Hoyt found it to be 0.75 on
+    # average (and we found that to be correct on average), but there is also
+    # a fair amount of variance in the population w.r.t. this parameter,
+    # anecdotally. We also assume that the visual field goes out to 90 degrees 
+    # (technically not correct, but works well enough for the model). Finally, 
+    # we assume that V1 starts at 0° of eccentricity.
 
+    # Our initial eccentricity values are the Benson 14 template predictions.
+    r0 = v1.prop('b14_eccentricity')
+    sarea = v1.prop('midgray_surface_area')
+    # We can calculae the scale using the surface area, shape, and max-eccen:
+    scale = hh91_scale(
+        np.sum(sarea),
+        shape=shape,
+        min_eccen=min_eccen,
+        max_eccen=max_eccen)
+    print(hemidx, " – V1 Surface Area: ", sarea.sum(), " (scale=",scale, ")", sep='')
+    # Run the matching algorithm and report on it:
+    # fname = str(benson_path) + '/' + hemidx + '.adjusted-eccen.mgh'
+    r = hh91_match(r0, sarea, shape=shape, min_eccen=min_eccen, max_eccen=max_eccen)
+    ny.save(fname, r)
+    print(hemidx, ' - Benson14 Eccentricity: min=', np.min(r0), ', max=', np.max(r0), sep='')
+    print(hemidx, ' - Adjusted Eccentricity: min=', np.min(r), ', max=', np.max(r), sep='') 
+    return r0,r,scale
+def plot_originalvsadjusted(r0,r,fname):
+    # fname = str(Save_DIR / subs) + '_' + hemidx + '_BensonVsAdjusted.png'
+
+    # What did the above cell do? Let's plot it:
+    (fig,ax) = plt.subplots(1,1, figsize=(3,3), dpi=128)
+    ax.loglog(r0, r, 'k.')
+    ax.loglog([0.1,90], [0.1,90], 'r:', zorder=-1)
+    ax.set_xlabel('Benson14 Eccentricity [deg]')
+    ax.set_ylabel('Adjusted Eccentricity [deg]')
+    ax.set_xlim([0.1,100])
+    ax.set_ylim([0.1,100])
+    ax.set_xticks([0.1, 1, 10, 100])
+    ax.set_yticks([0.1, 1, 10, 100])
+    ax.get_xaxis().set_major_formatter(mpl.ticker.ScalarFormatter())
+    ax.get_yaxis().set_major_formatter(mpl.ticker.ScalarFormatter())
+    plt.savefig(fname,dpi=128,bbox_inches = "tight")
+    plt.show()
+def plot_distributionECCvalues(r0,r,scale,fname,shape=0.75,min_eccen=0,max_eccen=90):
+    #fname = str(Save_DIR / subs) + '_' + hemidx + '_DistributionECCValues.png'
+
+    # What is the distribution of values like before and after adjustment?
+    # The red dotted line is the H&H prediction (specifically for histogram
+    # bins of the size below).
+    (fig,axs) = plt.subplots(1,2, figsize=(5,2), dpi=256)
+    fig.subplots_adjust(0,0,1,1,0.35,0)
+    for (ax,prop,tag) in zip(axs, [r0, r], ['Benson14', 'Adjusted']):
+        nbins = 50
+        ax.hist(prop, bins=nbins, range=(min_eccen, max_eccen), weights=sarea/100)
+        ax.set_xlabel(f'{tag} Eccentricity [deg]')
+        ax.set_ylabel(f'Surface Area [cm$^2$]')
+        bin_hwidth = ((max_eccen - min_eccen) / (nbins + 1)) / 2
+        x = np.linspace(min_eccen+bin_hwidth, max_eccen - bin_hwidth, 250)
+        b0 = x - bin_hwidth
+        b1 = x + bin_hwidth
+        b0[b0 < min_eccen] = min_eccen
+        b1[b1 > max_eccen] = max_eccen
+        y = (scale / (shape + x))**2 * np.pi*(b1**2 - b0**2)/2 / 100
+        ax.plot(x, y, 'r:')
+        ax.set_xscale('log')
+        ax.set_xlim(left=0.5)
+        ax.set_xticks([1,10,100])
+        ax.get_xaxis().set_major_formatter(mpl.ticker.ScalarFormatter())
+    plt.savefig(fname,dpi=256,bbox_inches = "tight")
+    plt.show()
+def plot_comparisonCorticalECC(hem,v1,r0,r,existpRF,idx,fname):
+    # fname = str(Save_DIR / subs) + '_' + hemidx + '_ComparisonCorticalECCmaps.png'
+
+    # Let's plot comparison maps:
+    if existpRF[idx] == 1:
+        (fig,axs) = plt.subplots(1, 3, figsize=(6, 2), dpi=256)
+    else:
+        (fig,axs) = plt.subplots(1, 2, figsize=(4, 2), dpi=256)
+
+    fig.subplots_adjust(0,0,1,1,0,0)
+    # Make a flatmap:
+    flatmap = hem.mask_flatmap(
+        ('parcellation', 43),
+        map_right='right',
+        radius=np.pi/2)
+    ecc = np.zeros(flatmap.vertex_count)
+    if existpRF[idx] == 1:
+        cod = flatmap.prop('prf_variance_explained')
+        for (ax, prop) in zip(axs, [r0, r, v1.prop('prf_eccentricity')]):
+            ecc[flatmap.tess.index(v1.labels)] = prop
+            ny.cortex_plot(
+                flatmap,
+                color=ecc,
+                mask=((ecc > 0) & (ecc < 25) & (cod > 0.04)),
+                cmap='eccentricity', vmin=0, vmax=90,
+                axes=ax)
+            ax.axis('off')
+        axs[0].set_title('Benson14')
+        axs[1].set_title('Adjusted')
+        axs[2].set_title('pRFs')
+    else:
+        for (ax, prop) in zip(axs, [r0, r]):
+            ecc[flatmap.tess.index(v1.labels)] = prop
+            ny.cortex_plot(
+                flatmap,
+                color=ecc,
+                mask=((ecc > 0) & (ecc < 25)),
+                cmap='eccentricity', vmin=0, vmax=90,
+                axes=ax)
+            ax.axis('off')
+        axs[0].set_title('Benson14')
+        axs[1].set_title('Adjusted')
+        
+    plt.savefig(fname,dpi=256,bbox_inches ="tight")
+    plt.show()
+def plot_comparisonECCvsNative(v1,r0,r,existpRF,idx,fname):
+    if existpRF[idx] == 1:
+        # fname = str(Save_DIR / subs) + '_' + hemidx + '_ComparisonECCvsNative.png'
+        
+        density_plot = True
+        (fig,axs) = plt.subplots(1,2, figsize=(5,2), dpi=256)
+        fig.subplots_adjust(0,0,1,1,0.35,0)
+        ecc = v1.prop('prf_eccentricity')
+        cod = v1.prop('prf_variance_explained')
+        #ii = (ecc < 20) & (cod > 0.04)
+        ii = cod > 0.04
+        (pmin,pmax) = (0.1, 100)
+        (logpmin, logpmax) = (np.log(pmin), np.log(pmax))
+        logpdif = logpmax - logpmin
+        yy, xx = np.mgrid[logpmin:logpmax:250j, logpmin:logpmax:250j]
+        positions = np.vstack([xx.ravel(), yy.ravel()])
+        for (ax,prop,tag) in zip(axs, [r0, r], ['Benson14', 'Adjusted']):
+            if density_plot:
+                values = np.vstack([prop[ii], ecc[ii]])
+                kernel = sp.stats.gaussian_kde(np.log(values), 0.1)
+                f = np.reshape(kernel(positions).T, xx.shape)
+                ax.imshow(f, cmap='Blues', vmin=0, vmax=0.8)
+                ax.plot([0,249], [0,249], 'r:', lw=0.5)
+                # Draw a line at 20°
+                ln = 249*(np.log([20,20]) - logpmin)/logpdif
+                ax.plot([0,250], ln, '--', c='0.5', lw=0.25)
+                ax.plot(ln, [0,250], '--', c='0.5', lw=0.25)
+                ax.invert_yaxis()
+                ax.set_xticks(250*(np.log([0.1, 1, 10, 100]) - logpmin)/logpdif)
+                ax.set_yticks(250*(np.log([0.1, 1, 10, 100]) - logpmin)/logpdif)
+                ax.set_xticklabels([0.1,1,10,100])
+                ax.set_yticklabels([0.1,1,10,100])
+                ax.set_xlim([0,250])
+                ax.set_ylim([0,250])
+            else:
+                ax.loglog(prop[ii], ecc[ii], 'k.', alpha=0.15)
+                ax.loglog([0.1,100], [0.1,100], 'r:', zorder=-1)
+                ax.set_xlim([0.1,100])
+                ax.set_ylim([0.1,100])
+                ax.set_xticks([0.1, 1, 10, 100])
+                ax.set_yticks([0.1, 1, 10, 100])
+                ax.get_xaxis().set_major_formatter(mpl.ticker.ScalarFormatter())
+                ax.get_yaxis().set_major_formatter(mpl.ticker.ScalarFormatter())
+            ax.set_xlabel(f'{tag} Eccentricity [deg]')
+            ax.set_ylabel(f'pRF Eccentricity [deg]')
+        plt.savefig(fname,dpi=256,bbox_inches = "tight")
+        plt.show()
 # Check the Cortical Magnification; a good way to calculate this is
 # to sort the vertices by eccentricity then look at a sliding window of
 # the vertices at a time.
@@ -141,3 +324,36 @@ def cmag(eccen, sarea, hwidth=0.075):
     rings_srfarea = cumsarea[ii_max] - cumsarea[ii_min - 1]
     rings_visarea = ring_area_deg2(eccen[ii_min], eccen[ii_max])
     return (out_ecc, rings_srfarea / rings_visarea)
+def plot_CMF(v1,r0,r,scale,shape=0.75,existpRF,idx,fname):
+    # fname = str(Save_DIR / subs) + '_' + hemidx + '_CMF.png'
+
+    (fig,ax) = plt.subplots(1,1, figsize=(5,3), dpi=256)
+    if existpRF[idx] == 1:
+        r_prf = v1.prop('prf_eccentricity')
+        sarea = v1.prop('midgray_surface_area')
+        eccs = [r0, r, r_prf]
+        tags = ['Benson14','Adjusted','pRF']
+        clrs = ['r','c','0.5']
+    else:
+        sarea = v1.prop('midgray_surface_area')
+        eccs = [r0, r]
+        tags = ['Benson14','Adjusted']
+        clrs = ['r','c']
+
+    for (prop,tag,c) in zip(eccs, tags, clrs):
+        (x, cm) = cmag(prop, sarea)
+        ax.loglog(x, cm, '-', c=c, lw=0.5, label=tag)
+        ax.set_xlabel('Eccentricity [deg]')
+        ax.set_ylabel(r'Cortical Magnification [mm$^2$/deg$^2$]')
+    # We also plot the Horton and Hoyt cmag as a reference.
+    x = np.linspace(0.25, 20, 500)
+    hh_cmag = ((scale / (x + shape)))**2
+    ax.loglog(x, hh_cmag, 'k:', label='H&H')
+    ax.set_xlim([0.5, 21])
+    ax.set_ylim([0.25, 200])
+    ax.set_xticks([0.5,1,2,5,10,20])
+    ax.get_xaxis().set_major_formatter(mpl.ticker.ScalarFormatter())
+    ax.get_yaxis().set_major_formatter(mpl.ticker.ScalarFormatter())
+    plt.legend()
+    plt.savefig(fname,dpi=256,bbox_inches = "tight")
+    plt.show()
