@@ -170,7 +170,27 @@ def adjust_eccen_in_v1(v1_eccen, v1_surface_area, shape=0.75,min_eccen=0,max_ecc
        shape=shape, min_eccen=min_eccen, max_eccen=max_eccen)
    # Return the adjusted eccen:
    return r
-
+def ring_area_deg2(min_eccen, max_eccen, hemifield=True):
+    """Computes the area (in square degrees) of a ring in the visual field."""
+    if hemifield:
+        return np.pi/2 * (max_eccen**2 - min_eccen**2)
+    else:
+        return np.pi * (max_eccen**2 - min_eccen**2)
+def cmag(eccen, sarea, hwidth=0.075):
+    n = len(eccen)
+    if not isinstance(hwidth, int):
+        hwidth = int(np.floor(n*hwidth))
+    width = 2*hwidth + 1
+    ii = np.argsort(eccen)
+    eccen = eccen[ii]
+    sarea = sarea[ii]
+    ii_min = np.arange(0, n - width)
+    ii_max = np.arange(width, n)
+    out_ecc = eccen[hwidth:n-hwidth-1]
+    cumsarea = np.concatenate([np.cumsum(sarea), [0]])
+    rings_srfarea = cumsarea[ii_max] - cumsarea[ii_min - 1]
+    rings_visarea = ring_area_deg2(eccen[ii_min], eccen[ii_max])
+    return (out_ecc, rings_srfarea / rings_visarea)
 
 # Plotting Function ############################################################
 
@@ -190,10 +210,10 @@ def plot_originalvsadjusted(r0, r, fname=None):
     ax.get_xaxis().set_major_formatter(mpl.ticker.ScalarFormatter())
     ax.get_yaxis().set_major_formatter(mpl.ticker.ScalarFormatter())
     if fname is not None:
-        plt.savefig(fname, dpi=128, bbox_inches = "tight")
+        plt.savefig(fname, dpi=256, bbox_inches = "tight")
     return fig
 
-def plot_distributionECCvalues(r0,r,scale,fname,shape=0.75,min_eccen=0,max_eccen=90):
+def plot_distributionECCvalues(r0,r,scale,shape=0.75,min_eccen=0,max_eccen=90,fname=None):
     #fname = str(Save_DIR / subs) + '_' + hemidx + '_DistributionECCValues.png'
 
     # What is the distribution of values like before and after adjustment?
@@ -218,13 +238,16 @@ def plot_distributionECCvalues(r0,r,scale,fname,shape=0.75,min_eccen=0,max_eccen
         ax.set_xlim(left=0.5)
         ax.set_xticks([1,10,100])
         ax.get_xaxis().set_major_formatter(mpl.ticker.ScalarFormatter())
-    plt.savefig(fname,dpi=256,bbox_inches = "tight")
-    plt.show()
-def plot_comparisonCorticalECC(hem,v1,r0,r,existpRF,idx,fname):
+
+        if fname is not None:
+            plt.savefig(fname, dpi=256, bbox_inches = "tight")
+        return fig
+
+def plot_comparisonCorticalECC(hem,v1,r0,r,existpRF=1,fname=None):
     # fname = str(Save_DIR / subs) + '_' + hemidx + '_ComparisonCorticalECCmaps.png'
 
     # Let's plot comparison maps:
-    if existpRF[idx] == 1:
+    if existpRF == 1:
         (fig,axs) = plt.subplots(1, 3, figsize=(6, 2), dpi=256)
     else:
         (fig,axs) = plt.subplots(1, 2, figsize=(4, 2), dpi=256)
@@ -236,7 +259,7 @@ def plot_comparisonCorticalECC(hem,v1,r0,r,existpRF,idx,fname):
         map_right='right',
         radius=np.pi/2)
     ecc = np.zeros(flatmap.vertex_count)
-    if existpRF[idx] == 1:
+    if existpRF == 1:
         cod = flatmap.prop('prf_variance_explained')
         for (ax, prop) in zip(axs, [r0, r, v1.prop('prf_eccentricity')]):
             ecc[flatmap.tess.index(v1.labels)] = prop
@@ -263,10 +286,12 @@ def plot_comparisonCorticalECC(hem,v1,r0,r,existpRF,idx,fname):
         axs[0].set_title('Benson14')
         axs[1].set_title('Adjusted')
         
-    plt.savefig(fname,dpi=256,bbox_inches ="tight")
-    plt.show()
-def plot_comparisonECCvsNative(v1,r0,r,existpRF,idx,fname):
-    if existpRF[idx] == 1:
+        if fname is not None:
+            plt.savefig(fname, dpi=256, bbox_inches = "tight")
+        return fig
+
+def plot_comparisonECCvsNative(v1,r0,r,existpRF=1,fname=None):
+    if existpRF == 1:
         # fname = str(Save_DIR / subs) + '_' + hemidx + '_ComparisonECCvsNative.png'
         
         density_plot = True
@@ -310,37 +335,22 @@ def plot_comparisonECCvsNative(v1,r0,r,existpRF,idx,fname):
                 ax.get_yaxis().set_major_formatter(mpl.ticker.ScalarFormatter())
             ax.set_xlabel(f'{tag} Eccentricity [deg]')
             ax.set_ylabel(f'pRF Eccentricity [deg]')
-        plt.savefig(fname,dpi=256,bbox_inches = "tight")
-        plt.show()
-# Check the Cortical Magnification; a good way to calculate this is
-# to sort the vertices by eccentricity then look at a sliding window of
-# the vertices at a time.
-def ring_area_deg2(min_eccen, max_eccen, hemifield=True):
-    """Computes the area (in square degrees) of a ring in the visual field."""
-    if hemifield:
-        return np.pi/2 * (max_eccen**2 - min_eccen**2)
+        
+        if fname is not None:
+            plt.savefig(fname, dpi=256, bbox_inches = "tight")
+        return fig
     else:
-        return np.pi * (max_eccen**2 - min_eccen**2)
-def cmag(eccen, sarea, hwidth=0.075):
-    n = len(eccen)
-    if not isinstance(hwidth, int):
-        hwidth = int(np.floor(n*hwidth))
-    width = 2*hwidth + 1
-    ii = np.argsort(eccen)
-    eccen = eccen[ii]
-    sarea = sarea[ii]
-    ii_min = np.arange(0, n - width)
-    ii_max = np.arange(width, n)
-    out_ecc = eccen[hwidth:n-hwidth-1]
-    cumsarea = np.concatenate([np.cumsum(sarea), [0]])
-    rings_srfarea = cumsarea[ii_max] - cumsarea[ii_min - 1]
-    rings_visarea = ring_area_deg2(eccen[ii_min], eccen[ii_max])
-    return (out_ecc, rings_srfarea / rings_visarea)
-def plot_CMF(v1,r0,r,scale,shape=0.75,existpRF,idx,fname):
+        print("Data from pRF mapping experiment required!")
+
+def plot_CMF(v1,r0,r,scale,shape=0.75,existpRF=1,fname=None):
+    # Check the Cortical Magnification; a good way to calculate this is
+    # to sort the vertices by eccentricity then look at a sliding window of
+    # the vertices at a time.
+
     # fname = str(Save_DIR / subs) + '_' + hemidx + '_CMF.png'
 
     (fig,ax) = plt.subplots(1,1, figsize=(5,3), dpi=256)
-    if existpRF[idx] == 1:
+    if existpRF == 1:
         r_prf = v1.prop('prf_eccentricity')
         sarea = v1.prop('midgray_surface_area')
         eccs = [r0, r, r_prf]
@@ -367,5 +377,7 @@ def plot_CMF(v1,r0,r,scale,shape=0.75,existpRF,idx,fname):
     ax.get_xaxis().set_major_formatter(mpl.ticker.ScalarFormatter())
     ax.get_yaxis().set_major_formatter(mpl.ticker.ScalarFormatter())
     plt.legend()
-    plt.savefig(fname,dpi=256,bbox_inches = "tight")
-    plt.show()
+
+    if fname is not None:
+        plt.savefig(fname, dpi=256, bbox_inches = "tight")
+    return fig
