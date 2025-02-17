@@ -3,38 +3,44 @@
 This package contains code to adjust the eccentricity of a predicted pRF map to
 match the eccentricity distribution implied by Horton and Hoyt (1991).
 """
+import numpy as np
 
-def load_v1(sub,hemidx,fname):
-    hem = sub.hemis[hemidx]
-    print(hem)
-    # If we want to run this on another subject, we can apply the the Benson14
-    # template using this code::
-    # ret = ny.vision.predict_retinotopy(hem, sym_angle=False)
-    # hem = hem.with_prop(
-    #     b14_polar_angle=ret['angle'],
-    #     b14_eccentricity=ret['eccen'],
-    #     b14_visual_area=ret['varea'])
+# def load_v1(sub,hemlabel,fname):
+#     # fname = str(benson_path) + '/' + hemlabel + '-adjusted-eccen-VtxLabels.txt'
 
-    # Pick out just V1 on the white surface, using Benson atlas
-    v1 = hem.white_surface.submesh(hem.mask(('b14_visual_area', 1)))
-    print('Size V1 mask=',len(hem.mask(('b14_visual_area', 1))),sep='') 
-    print('V1=',v1,sep='')
-    # The polar angle values are fine we assume; we just want to rescale
-    # the eccentricity.
-    # fname = str(benson_path) + '/' + hemidx + '-adjusted-eccen-VtxLabels.txt'
-    # print(dir(hem.white_surface)) 
-    # help(v1)
-    np.set_printoptions(threshold=np.inf)
-    ny.save(fname, v1.labels)
-    return hem,v1
+#     hem = sub.hemis[hemlabel]
+#     print(hem)
+#     # If we want to run this on another subject, we can apply the the Benson14
+#     # template using this code::
+#     # ret = ny.vision.predict_retinotopy(hem, sym_angle=False)
+#     # hem = hem.with_prop(
+#     #     b14_polar_angle=ret['angle'],
+#     #     b14_eccentricity=ret['eccen'],
+#     #     b14_visual_area=ret['varea'])
+
+#     # Pick out just V1 on the white surface, using Benson atlas
+#     v1 = hem.white_surface.submesh(hem.mask(('b14_visual_area', 1)))
+#     # Display the size of V1 mask
+#     print('Size V1 mask=',len(hem.mask(('b14_visual_area', 1))),sep='') 
+#     # Display the information about V1 mesh, such as number of faces and vertices
+#     print('V1=',v1,sep='')
+#     # The polar angle values are fine we assume; we just want to rescale
+#     # the eccentricity.
+#     # print(dir(hem.white_surface)) 
+#     # help(v1)
+#     np.set_printoptions(threshold=np.inf)
+#     # Save the V1 vertices index into a txt file
+#     ny.save(fname, v1.labels)
+#     return hem,v1
+
 def hh91_scale(surface_area, shape=0.75, min_eccen=0, max_eccen=90):
     '''Returns the `scale` parameter of Horton & Hoyt's magnification model.
-
+    
     Returns the value of `scale` in the cortical magnification model of Horton
     and Hoyt (1991) that is appropriate for a V1 with the given surface-area
     (`area`), assuming that the maximum eccentricity of V1 is given by the
     optional parameter `max_eccen` (default: 90).
-
+    
     Horton and Hoyt's original equation was:
       `m(r) = (scale / (shape + r))**2`
     where `r` is the eccentricity in degrees, `shape` is 0.75 degrees, and
@@ -48,17 +54,18 @@ def hh91_scale(surface_area, shape=0.75, min_eccen=0, max_eccen=90):
         - max_eccen/shape_maxecc 
         + np.log(shape_maxecc/shape_minecc))
     return np.sqrt(surface_area / den)
+
 def hh91_match(eccen, sarea, shape=0.75, min_eccen=0, max_eccen=90,
                max_steps=100, atol=1e-05, rtol=1e-08):
     """Returns eccentricity values that match the Horton and Hoyt (1991)
     distribution of eccentricity values.
-
+    
     The optional parameter `shape` is the offset of the denominator in
     Horton & Hoyt's equation: `m(r) = (scale / (shape + r))**2` where `r`
     is the eccentricity in degrees, `shape` is 0.75 degrees, and scale is
     17.3 mm. The parameter `scale` is determined by the total surface area
     of V1 and thus is not required.
-
+    
     The functions returns a vector `matched_eccen` that is similar to the
     argument `eccen`; in fact, `argsort(eccen)` must be equal to
     `argsort(matched_eccen)`. However, the values will be conformed to
@@ -139,25 +146,7 @@ def hh91_match(eccen, sarea, shape=0.75, min_eccen=0, max_eccen=90,
     # We need to unsort these, however!
     r[ordering] = np.array(r)
     return r
-def adjust_eccen(v1,hemidx,fname,shape=0.75,min_eccen=0,max_eccen=90):
-    # Go ahead and adjust the eccentricity using the function above.
-    # We can pick a shape parameter; Horton & Hoyt found it to be 0.75 on
-    # average (and we found that to be correct on average), but there is also
-    # a fair amount of variance in the population w.r.t. this parameter,
-    # anecdotally. We also assume that the visual field goes out to 90 degrees 
-    # (technically not correct, but works well enough for the model). Finally, 
-    # we assume that V1 starts at 0° of eccentricity.
 
-    # Our initial eccentricity values are the Benson 14 template predictions.
-    r0 = v1.prop('b14_eccentricity')
-    sarea = v1.prop('midgray_surface_area')
-    print(hemidx, " – V1 Surface Area: ", sarea.sum(), " (scale=",scale, ")", sep='')
-    # We can calculae the scale using the surface area, shape, and max-eccen:
-    r = adjust_eccen_in_v1(r0, sarea, shape=shape, min_eccen=min_eccen, max_eccen=max_eccen)
-    ny.save(fname, r)
-    print(hemidx, ' - Benson14 Eccentricity: min=', np.min(r0), ', max=', np.max(r0), sep='')
-    print(hemidx, ' - Adjusted Eccentricity: min=', np.min(r), ', max=', np.max(r), sep='') 
-    return r0,r,scale
 def adjust_eccen_in_v1(v1_eccen, v1_surface_area, shape=0.75,min_eccen=0,max_eccen=90):
    scale = hh91_scale(
        np.sum(v1_surface_area),
@@ -169,7 +158,29 @@ def adjust_eccen_in_v1(v1_eccen, v1_surface_area, shape=0.75,min_eccen=0,max_ecc
        v1_eccen, v1_surface_area,
        shape=shape, min_eccen=min_eccen, max_eccen=max_eccen)
    # Return the adjusted eccen:
-   return r
+   return r,scale
+
+# def adjust_eccen(v1,hemlabel,fname,shape=0.75,min_eccen=0,max_eccen=90):
+#     # Go ahead and adjust the eccentricity using the function above.
+#     # We can pick a shape parameter; Horton & Hoyt found it to be 0.75 on
+#     # average (and we found that to be correct on average), but there is also
+#     # a fair amount of variance in the population w.r.t. this parameter,
+#     # anecdotally. We also assume that the visual field goes out to 90 degrees 
+#     # (technically not correct, but works well enough for the model). Finally, 
+#     # we assume that V1 starts at 0° of eccentricity.
+
+#     # Our initial eccentricity values are the Benson 14 template predictions.
+#     r0 = v1.prop('b14_eccentricity')
+#     sarea = v1.prop('midgray_surface_area')
+#     # We can calculae the scale using the surface area, shape, and max-eccen:
+#     r,scale = adjust_eccen_in_v1(r0, sarea, shape=shape, min_eccen=min_eccen, max_eccen=max_eccen)
+#     # Save adjusted eccentricities
+#     ny.save(fname, r)
+#     print(hemlabel, ' - Benson14 Eccentricity: min=', np.min(r0), ', max=', np.max(r0), sep='')
+#     print(hemlabel, ' - Adjusted Eccentricity: min=', np.min(r), ', max=', np.max(r), sep='') 
+#     # Return the initial, adjusted eccentricities and scale variable
+#     return r0,r,scale
+
 def ring_area_deg2(min_eccen, max_eccen, hemifield=True):
     """Computes the area (in square degrees) of a ring in the visual field."""
     if hemifield:
@@ -195,7 +206,7 @@ def cmag(eccen, sarea, hwidth=0.075):
 # Plotting Function ############################################################
 
 def plot_originalvsadjusted(r0, r, fname=None):
-    # fname = str(Save_DIR / subs) + '_' + hemidx + '_BensonVsAdjusted.png'
+    # fname = str(Save_DIR / subs) + '_' + hemlabel + '_BensonVsAdjusted.png'
 
     # What did the above cell do? Let's plot it:
     (fig,ax) = plt.subplots(1,1, figsize=(3,3), dpi=128)
@@ -214,7 +225,7 @@ def plot_originalvsadjusted(r0, r, fname=None):
     return fig
 
 def plot_distributionECCvalues(r0,r,scale,shape=0.75,min_eccen=0,max_eccen=90,fname=None):
-    #fname = str(Save_DIR / subs) + '_' + hemidx + '_DistributionECCValues.png'
+    #fname = str(Save_DIR / subs) + '_' + hemlabel + '_DistributionECCValues.png'
 
     # What is the distribution of values like before and after adjustment?
     # The red dotted line is the H&H prediction (specifically for histogram
@@ -244,7 +255,7 @@ def plot_distributionECCvalues(r0,r,scale,shape=0.75,min_eccen=0,max_eccen=90,fn
         return fig
 
 def plot_comparisonCorticalECC(hem,v1,r0,r,existpRF=1,fname=None):
-    # fname = str(Save_DIR / subs) + '_' + hemidx + '_ComparisonCorticalECCmaps.png'
+    # fname = str(Save_DIR / subs) + '_' + hemlabel + '_ComparisonCorticalECCmaps.png'
 
     # Let's plot comparison maps:
     if existpRF == 1:
@@ -292,7 +303,7 @@ def plot_comparisonCorticalECC(hem,v1,r0,r,existpRF=1,fname=None):
 
 def plot_comparisonECCvsNative(v1,r0,r,existpRF=1,fname=None):
     if existpRF == 1:
-        # fname = str(Save_DIR / subs) + '_' + hemidx + '_ComparisonECCvsNative.png'
+        # fname = str(Save_DIR / subs) + '_' + hemlabel + '_ComparisonECCvsNative.png'
         
         density_plot = True
         (fig,axs) = plt.subplots(1,2, figsize=(5,2), dpi=256)
@@ -347,7 +358,7 @@ def plot_CMF(v1,r0,r,scale,shape=0.75,existpRF=1,fname=None):
     # to sort the vertices by eccentricity then look at a sliding window of
     # the vertices at a time.
 
-    # fname = str(Save_DIR / subs) + '_' + hemidx + '_CMF.png'
+    # fname = str(Save_DIR / subs) + '_' + hemlabel + '_CMF.png'
 
     (fig,ax) = plt.subplots(1,1, figsize=(5,3), dpi=256)
     if existpRF == 1:
