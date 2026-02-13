@@ -6,7 +6,7 @@
 FROM nben/neuropythy:latest
 
 # Note the Maintainer. TODO: add email address.
-MAINTAINER Hugo T. Chow-Wing-Bom <hugo.chow-wing-bom.15@ucl.ac.uk>
+LABEL maintainer="Hugo T. Chow-Wing-Bom <hugo.chow-wing-bom.15@ucl.ac.uk>"
 
 
 # Copy our library into the docker image.

@@ -4,6 +4,9 @@ This package contains code to adjust the eccentricity of a predicted pRF map to
 match the eccentricity distribution implied by Horton and Hoyt (1991).
 """
 import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+import neuropythy as ny
 
 # def load_v1(sub,hemlabel,fname):
 #     # fname = str(benson_path) + '/' + hemlabel + '-adjusted-eccen-VtxLabels.txt'
@@ -224,7 +227,7 @@ def plot_originalvsadjusted(r0, r, fname=None):
         plt.savefig(fname, dpi=256, bbox_inches = "tight")
     return fig
 
-def plot_distributionECCvalues(r0,r,scale,shape=0.75,min_eccen=0,max_eccen=90,fname=None):
+def plot_distributionECCvalues(r0,r,sarea,scale,shape=0.75,min_eccen=0,max_eccen=90,fname=None):
     #fname = str(Save_DIR / subs) + '_' + hemlabel + '_DistributionECCValues.png'
 
     # What is the distribution of values like before and after adjustment?
@@ -250,11 +253,11 @@ def plot_distributionECCvalues(r0,r,scale,shape=0.75,min_eccen=0,max_eccen=90,fn
         ax.set_xticks([1,10,100])
         ax.get_xaxis().set_major_formatter(mpl.ticker.ScalarFormatter())
 
-        if fname is not None:
-            plt.savefig(fname, dpi=256, bbox_inches = "tight")
-        return fig
+    if fname is not None:
+        plt.savefig(fname, dpi=256, bbox_inches = "tight")
+    return fig
 
-def plot_comparisonCorticalECC(hem,v1,r0,r,existpRF=1,fname=None):
+def plot_comparisonCorticalECC(hem,v1label,r0,r,existpRF=1,fname=None):
     # fname = str(Save_DIR / subs) + '_' + hemlabel + '_ComparisonCorticalECCmaps.png'
 
     # Let's plot comparison maps:
@@ -286,7 +289,7 @@ def plot_comparisonCorticalECC(hem,v1,r0,r,existpRF=1,fname=None):
         axs[2].set_title('pRFs')
     else:
         for (ax, prop) in zip(axs, [r0, r]):
-            ecc[flatmap.tess.index(v1.labels)] = prop
+            ecc[flatmap.tess.index(v1label)] = prop
             ny.cortex_plot(
                 flatmap,
                 color=ecc,
@@ -297,9 +300,9 @@ def plot_comparisonCorticalECC(hem,v1,r0,r,existpRF=1,fname=None):
         axs[0].set_title('Benson14')
         axs[1].set_title('Adjusted')
         
-        if fname is not None:
-            plt.savefig(fname, dpi=256, bbox_inches = "tight")
-        return fig
+    if fname is not None:
+        plt.savefig(fname, dpi=256, bbox_inches = "tight")
+    return fig
 
 def plot_comparisonECCvsNative(v1,r0,r,existpRF=1,fname=None):
     if existpRF == 1:
@@ -353,7 +356,7 @@ def plot_comparisonECCvsNative(v1,r0,r,existpRF=1,fname=None):
     else:
         print("Data from pRF mapping experiment required!")
 
-def plot_CMF(v1,r0,r,scale,shape=0.75,existpRF=1,fname=None):
+def plot_CMF(maskarea,r0,r,scale,shape=0.75,existpRF=1,fname=None):
     # Check the Cortical Magnification; a good way to calculate this is
     # to sort the vertices by eccentricity then look at a sliding window of
     # the vertices at a time.
@@ -361,14 +364,13 @@ def plot_CMF(v1,r0,r,scale,shape=0.75,existpRF=1,fname=None):
     # fname = str(Save_DIR / subs) + '_' + hemlabel + '_CMF.png'
 
     (fig,ax) = plt.subplots(1,1, figsize=(5,3), dpi=256)
+    sarea = maskarea
     if existpRF == 1:
         r_prf = v1.prop('prf_eccentricity')
-        sarea = v1.prop('midgray_surface_area')
         eccs = [r0, r, r_prf]
         tags = ['Benson14','Adjusted','pRF']
         clrs = ['r','c','0.5']
     else:
-        sarea = v1.prop('midgray_surface_area')
         eccs = [r0, r]
         tags = ['Benson14','Adjusted']
         clrs = ['r','c']

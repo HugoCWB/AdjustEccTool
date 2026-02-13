@@ -14,8 +14,10 @@ import sys
 import argparse
 
 import neuropythy as ny
+import numpy as np
 
-from __init__ import adjust_eccen_in_v1
+from . import adjust_eccen_in_v1
+from . import plot_originalvsadjusted, plot_distributionECCvalues, plot_comparisonCorticalECC,plot_CMF
 
 # This needs to do a few things:
 # (1) parse the arguments for a subject ID in a FreeSurfer directory and
@@ -28,23 +30,28 @@ from __init__ import adjust_eccen_in_v1
 # (4) print out useful information
 # (5) write out adjusted eccentricity output
 # (6) write out vertex labels into a txt file for use in Matlab
+# (7) Plot the figures for:
+#           - Benson pre- versus post-eccentricity values
+#           - Distribution of Benson eccentricity values for pre- and post-eccentricity adjustment 
+#           - Eccentricity maps on cortical surface for pre- and post-eccentricity adjustment 
+#           - Cortical magnification factor curve for pre-, post-eccentricity adjustment, H&H model
 
-# First use argparse:
 print("IT WORKS")
-# sys.exit(0)
 
 # Initialize parser
 parser = argparse.ArgumentParser(description="Adjusting Eccentricity in Benson eccentricity map")
 # Add mandatory arguments 
 parser.add_argument('-i1', '--input1', type=str, required=True, help='FreeSurfer subject ID') 
 parser.add_argument('-i2', '--input2', type=str, required=True, help='Hemisphere label (e.g., lh)') 
-parser.add_argument('-i3', '--input3', type=str, required=True, help='Eccentricity file and location within the FreeSurfer directory (e.g., surf/lh.benson14_eccen.mgz)') 
-parser.add_argument('-i4', '--input4', type=str, required=True, help='Area file and location within the FreeSurfer directory (e.g., surf/lh.benson14_v_area.mgz)') 
+parser.add_argument('-i3', '--input3', type=str, required=True, help='Eccentricity file and location within the FreeSurfer directory (e.g., surf/lh.benson14_eccen.mgz (or .mgh))') 
+parser.add_argument('-i4', '--input4', type=str, required=True, help='Area file and location within the FreeSurfer directory (e.g., surf/lh.benson14_v_area.mgz (or .mgh))') 
 parser.add_argument('-i5', '--input5', type=str, required=True, help='Output Directory')
+parser.add_argument('-i6', '--input6', type=str, required=True, default='.png', help='Format for saving figures (default = .png)')
 # Add optional arguments 
-parser.add_argument('-i6', '--input6', type=float, required=False, default=0.75, help='Shape (default = 0.75)')
-parser.add_argument('-i7', '--input7', type=float, required=False, default=0, help='Minimum eccentricity (default = 0)')
-parser.add_argument('-i8', '--input8', type=float, required=False,default=90, help='Maximum eccentricity (default = 90)')
+parser.add_argument('-i7', '--input7', type=float, required=False, default=0.75, help='Shape (default = 0.75)')
+parser.add_argument('-i8', '--input8', type=float, required=False, default=0, help='Minimum eccentricity (default = 0)')
+parser.add_argument('-i9', '--input9', type=float, required=False,default=90, help='Maximum eccentricity (default = 90)')
+parser.add_argument('-i10', '--input10', type=float, required=False, default=0, help='Existing pRF maps (default = 0)')
 
 # Retrieve arguments
 args = parser.parse_args()
@@ -53,14 +60,16 @@ hemlabel = args.input2
 input_eccen = args.input3
 input_varea = args.input4
 output_dir = args.input5
-shape = args.input6
-min_ecc = args.input7
-max_ecc = args.input8
+figformat = args.input6
+shape = args.input7
+min_ecc = args.input8
+max_ecc = args.input9
+pRFexist = args.input10
 
 # Load in data:
 sub = ny.freesurfer_subject(input_subject_id) # e.g., <path-to-freesurfer-subjects-folder>
-eccen = ny.load(sub.path_join(input_eccen))# e.g., input_eccen = surf/lh.benson14_eccen.mgz
-label = ny.load(sub.path_join(input_varea)) # e.g., input_varea = surf/lh.benson14_varea.mgz
+eccen = ny.load(sub.path_join(input_eccen))# e.g., input_eccen = surf/lh.benson14_eccen.mgz (or .mgh)
+label = ny.load(sub.path_join(input_varea)) # e.g., input_varea = surf/lh.benson14_varea.mgz (or .mgh)
 
 # Filter vertices of interest once we have loaded the subject (sub), hemisphere name (hemlabel)
 # the eccentricity map (eccen) and the labels or "varea" (label):
@@ -90,6 +99,22 @@ ny.save(output_fname, adjusted_eccen)
 # (This will need a command-line option to know the output directory)
 output_fname = output_dir + '/' + hemlabel.lower() + '-V1-adjusted-eccen-VtxLabels.txt'
 v1_vtxidx = hem.labels[mask] # Vertex Index of selected vertices on cortical surface
-ny.save(output_fname, v1_vtxidx)
+np.savetxt(output_fname, v1_vtxidx, fmt="%d")
+
+# Plot the Benson original versus Benson adjusted eccentricity values 
+plot_fname = output_dir + '/' + hemlabel.lower() + '-V1-originalvsajusted' + figformat
+plot_originalvsadjusted(v1_eccen, adjusted_eccen, fname=plot_fname)
+
+# Plot the Benson original versus Benson adjusted eccentricity distributions 
+plot_fname = output_dir + '/' + hemlabel.lower() + '-V1-distributionECCvalues' + figformat
+plot_distributionECCvalues(v1_eccen, adjusted_eccen, v1_sarea, scale,shape=shape,min_eccen=min_ecc,max_eccen=max_ecc,fname=plot_fname)
+
+# Plot the eccentricity maps on cortical surface for Benson original, Benson adjusted, and pRF (if existpRF=1) 
+plot_fname = output_dir + '/' + hemlabel.lower() + '-V1-comparisonCorticalECC' + figformat
+plot_comparisonCorticalECC(hem,v1_vtxidx,v1_eccen, adjusted_eccen,existpRF=pRFexist,fname=plot_fname)
+
+# Plot the cortical magnification factor curve for Benson original, Benson adjusted, H&H model, and pRF (if existpRF=1)
+plot_fname = output_dir + '/' + hemlabel.lower() + '-V1-CMF' + figformat
+plot_CMF(v1_sarea,v1_eccen,adjusted_eccen,scale,shape=shape,existpRF=pRFexist,fname=plot_fname)
 
 
