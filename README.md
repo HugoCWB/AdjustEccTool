@@ -44,7 +44,9 @@ Ensure that **Docker Desktop** is running.
 
 Neuropythy’s base image is **AMD64**, so the image must be built using that platform. To do so, use the following command:
 
+```
 docker build --platform=linux/amd64 -t <DOCKER PROJECT IMAGE NAME> "<PATH TO DOCKER SCRIPT FOLDER>"
+```
 
 For instance, if you want to name your docker image smriproject and you downloaded this toolbox in /Users/.../Desktop/StructuralMRI: 
 docker build --platform=linux/amd64 -t smriproject "/Users/.../Desktop/StructuralMRI"
@@ -60,6 +62,7 @@ docker run --platform=linux/amd64 smriproject --help
 
 ## Running the Tool on a Participant
 
+```
 docker run --platform=linux/amd64 \
   -v <FREESURFER SUBJECTS DIRECTORY PATH>:/subjects \
   -v <PARTICIPANT RESULT FOLDER DIRECTORY PATH>:/out \
@@ -71,6 +74,7 @@ docker run --platform=linux/amd64 \
   -i4 surf/?h.benson14_varea.mgh \
   -i5 /out \
   -i6 '.png'
+```
 
 Hemisphere notation: Replace ?h with the appropriate hemisphere label (Left hemisphere: use lh; Right hemisphere: use rh)
 For example, for the left hemisphere, the relevant arguments become:
