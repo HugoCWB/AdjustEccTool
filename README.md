@@ -48,12 +48,12 @@ Neuropythy’s base image is **AMD64**, so the image must be built using that pl
 docker build --platform=linux/amd64 -t <DOCKER PROJECT IMAGE NAME> "<PATH TO DOCKER SCRIPT FOLDER>"
 ```
 
-For instance, if you want to name your docker image smriproject and you downloaded this toolbox in /Users/.../Desktop/StructuralMRI: 
+For instance, if you want to name your docker image smriproject and you downloaded this toolbox in /Users/.../Desktop/AdjustEccTool: 
 ```
-docker build --platform=linux/amd64 -t smriproject "/Users/.../Desktop/StructuralMRI"
+docker build --platform=linux/amd64 -t smriproject "/Users/.../Desktop/AdjustEccTool"
 ```
 
-Alternatively, you can go to the downloaded directory (e.g., cd /Users/.../Desktop/StructuralMRI) and execute the following: 
+Alternatively, you can go to the downloaded directory (e.g., cd /Users/.../Desktop/AdjustEccTool) and execute the following: 
 ```
 docker build --platform=linux/amd64 -t smriproject .
 ```
