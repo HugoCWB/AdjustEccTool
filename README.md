@@ -1,4 +1,4 @@
-# StructuralMRI — Eccentricity Adjustment Tool (Docker)
+# AdjustEccTool - Benson Map Eccentricity Adjustment Tool (Docker)
 
 This repository provides a Docker-based tool for correcting the eccentricity distribution derived from the **Benson atlas** (via *neuropythy*). The method implements the procedure described in:
 
@@ -10,7 +10,7 @@ The tool loads the neuropythy outputs from a participant’s FreeSurfer folder, 
 
 ## TODO / Future Extensions
 
-In __init__.py and __main__.py: The current plotting functions assume Benson atlas inputs. Consider adding support for pRF-derived eccentricity maps, allowing users to overlay or compare pRF estimates with Benson-adjusted values in the diagnostic plots.
+In `__init__.py` and `__main__.py`: The current plotting functions assume Benson atlas inputs. Consider adding support for pRF-derived eccentricity maps, allowing users to overlay or compare pRF estimates with Benson-adjusted values in the diagnostic plots.
 
 ---
 
@@ -49,14 +49,20 @@ docker build --platform=linux/amd64 -t <DOCKER PROJECT IMAGE NAME> "<PATH TO DOC
 ```
 
 For instance, if you want to name your docker image smriproject and you downloaded this toolbox in /Users/.../Desktop/StructuralMRI: 
+```
 docker build --platform=linux/amd64 -t smriproject "/Users/.../Desktop/StructuralMRI"
+```
 
 Alternatively, you can go to the downloaded directory (e.g., cd /Users/.../Desktop/StructuralMRI) and execute the following: 
+```
 docker build --platform=linux/amd64 -t smriproject .
-(Note: the final . is important)
+```
+(**Note: the final . is important**)
 
 To verify your image installation:
+```
 docker run --platform=linux/amd64 smriproject --help
+```
 
 ---
 
@@ -78,13 +84,12 @@ docker run --platform=linux/amd64 \
 
 Hemisphere notation: Replace ?h with the appropriate hemisphere label (Left hemisphere: use lh; Right hemisphere: use rh)
 For example, for the left hemisphere, the relevant arguments become:
--i2 lh
--i3 surf/lh.benson14_eccen.mgh
--i4 surf/lh.benson14_varea.mgh
+`-i2 lh`, `-i3 surf/lh.benson14_eccen.mgh`, and `-i4 surf/lh.benson14_varea.mgh`.
 
 All outputs (adjusted maps, vertex labels, and plots) will be written to the mounted results folder.
 
 Example for left hemisphere from participant C001:
+```
 docker run --platform=linux/amd64 \
   -v /Users/hugo/freesurfer/subjects:/subjects \
   -v /Users/hugo/results/C001:/out \
@@ -96,11 +101,14 @@ docker run --platform=linux/amd64 \
   -i4 surf/lh.benson14_varea.mgh \
   -i5 /out \
   -i6 '.png'
+```
 
 ---
 
 ## Cleaning Up Docker Images
 You can remove the image via Docker Desktop or:
 
+```
 docker images
 docker rmi smriproject
+```
