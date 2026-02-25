@@ -110,5 +110,7 @@ You can remove the image via Docker Desktop or:
 
 ```
 docker images
+docker stop <ID OF CONTAINER>
+docker rm <ID OF CONTAINER>
 docker rmi smriproject
 ```
