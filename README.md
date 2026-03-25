@@ -17,6 +17,7 @@ In `__init__.py` and `__main__.py`: The current plotting functions assume Benson
 ## Requirements
 
 ### 1. Benson atlas outputs
+
 The script requires two files per hemisphere:
 
 - **Eccentricity map:**  
@@ -30,7 +31,7 @@ These must:
 - contain **value 1 for V1 vertices only** in the V1 area map (i.e., `?h.benson14_varea.mgh` (or .mgz))
 
 ### 2. FreeSurfer SUBJECTS_DIR
-The script reads the participant’s FreeSurfer reconstruction.  
+The script reads the participant’s FreeSurfer reconstruction. \
 Before running the container, ensure to set SUBJECTS_DIR directory accordingly beforehand (see below).
 
 ---
@@ -82,7 +83,7 @@ docker run --platform=linux/amd64 \
   -i6 '.png'
 ```
 
-Hemisphere notation: Replace ?h with the appropriate hemisphere label (Left hemisphere: use lh; Right hemisphere: use rh).\
+Hemisphere notation: Replace ?h with the appropriate hemisphere label (Left hemisphere: use lh; Right hemisphere: use rh). \
 For example, for the left hemisphere, the relevant arguments become: `-i2 lh`, `-i3 surf/lh.benson14_eccen.mgh`, and `-i4 surf/lh.benson14_varea.mgh`.
 
 All outputs (adjusted maps, vertex labels, and plots) will be written to the mounted results folder.
@@ -105,6 +106,7 @@ docker run --platform=linux/amd64 \
 ---
 
 ## Cleaning Up Docker Images
+
 You can remove the image via Docker Desktop or:
 
 ```
