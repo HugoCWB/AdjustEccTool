@@ -82,9 +82,8 @@ docker run --platform=linux/amd64 \
   -i6 '.png'
 ```
 
-Hemisphere notation: Replace ?h with the appropriate hemisphere label (Left hemisphere: use lh; Right hemisphere: use rh)
-For example, for the left hemisphere, the relevant arguments become:
-`-i2 lh`, `-i3 surf/lh.benson14_eccen.mgh`, and `-i4 surf/lh.benson14_varea.mgh`.
+Hemisphere notation: Replace ?h with the appropriate hemisphere label (Left hemisphere: use lh; Right hemisphere: use rh).\
+For example, for the left hemisphere, the relevant arguments become: `-i2 lh`, `-i3 surf/lh.benson14_eccen.mgh`, and `-i4 surf/lh.benson14_varea.mgh`.
 
 All outputs (adjusted maps, vertex labels, and plots) will be written to the mounted results folder.
 
